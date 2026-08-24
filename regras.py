@@ -149,3 +149,14 @@ def aeronaves_aptas(local_id, dados_local, frota):
 def formatar_brl(valor):
     """1234.5 -> 'R$ 1.234,50'"""
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+# --- Trechos de tempo fixo (DTA) -------------------------------------------
+# Pernas cujo tempo é tabelado e substitui o cálculo por distância. O tempo
+# fixo É faturado. Única exceção ao cálculo por Haversine na tabela DTA.
+TEMPO_FIXO_DTA_MIN = {frozenset({"SBBH", "SBCF"}): 10}
+
+
+def tempo_fixo_dta_minutos(origem, destino):
+    """Minutos tabelados para o par origem/destino na DTA, ou None."""
+    return TEMPO_FIXO_DTA_MIN.get(frozenset({origem, destino}))
