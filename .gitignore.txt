@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Sistema operacional / editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Planilhas temporárias geradas na execução
+missao_dta_*.xlsx
+aerodromos_dta_*.xlsx
+
+# ATENÇÃO: coordenadas_aerodromos.json DEVE ser versionado.
+# Não adicione esse arquivo aqui.
