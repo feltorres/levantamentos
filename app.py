@@ -17,6 +17,8 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
+import aba_comave
+
 from dados import (
     AEROPORTOS,
     COORDS_BACKUP,
@@ -31,6 +33,7 @@ from regras import (
     comprimento_pista,
     decimal_para_hhmmss,
     formatar_brl,
+    tempo_fixo_dta_minutos,
     velocidade_efetiva,
     verifica_restricao_pista,
 )
@@ -280,8 +283,15 @@ def calcular_missao(trechos):
         if origem == destino:
             erros.append(f"Trecho {i}: origem e destino iguais ({origem}).")
 
-        vel_kt = velocidade_efetiva(dados_aero, dist_nm)
-        tempo_decimal = dist_nm / vel_kt if vel_kt > 0 else 0.0
+        # Única exceção ao cálculo por distância na tabela DTA: pares com
+        # tempo tabelado (BH x Confins = 10 min), faturados por esse tempo.
+        minutos_fixos = tempo_fixo_dta_minutos(origem, destino)
+        if minutos_fixos is not None:
+            vel_kt = 0
+            tempo_decimal = minutos_fixos / 60
+        else:
+            vel_kt = velocidade_efetiva(dados_aero, dist_nm)
+            tempo_decimal = dist_nm / vel_kt if vel_kt > 0 else 0.0
         custo_perna = tempo_decimal * dados_aero["valor_hora"]
 
         if bloqueio_anac:
@@ -304,6 +314,7 @@ def calcular_missao(trechos):
                 "anv": dados_aero["tipo_sigla"],
                 "dist_nm": dist_nm,
                 "vel_kt": vel_kt,
+                "tempo_fixo": minutos_fixos is not None,
                 "tempo_txt": tempo_txt,
                 "custo_txt": custo_txt,
                 "custo_num": custo_perna,
@@ -513,7 +524,9 @@ def gerar_xlsx_aerodromos(df):
 # ===========================================================================
 st.title("🚁 Planejador de Missões Aéreas - DTA")
 
-aba_missao, aba_consulta = st.tabs(["✈️ Cálculo de Missão", "🛬 Consulta de Aeródromos"])
+aba_missao, aba_comave_ui, aba_consulta = st.tabs(
+    ["✈️ Cálculo de Missão (DTA)", "🛡️ Cálculo COMAVE", "🛬 Consulta de Aeródromos"]
+)
 
 # --------------------------- ABA 1: MISSÃO ---------------------------------
 with aba_missao:
@@ -638,7 +651,7 @@ with aba_missao:
                             "Trecho": f"{l['ind_orig']} → {l['ind_dest']}",
                             "ANV": l["anv"],
                             "Distância (NM)": l["dist_nm"],
-                            "Velocidade (KT)": l["vel_kt"],
+                            "Velocidade (KT)": "Tabelado" if l.get("tempo_fixo") else str(l["vel_kt"]),
                             "Tempo": l["tempo_txt"],
                             "Custo (R$)": round(l["custo_num"], 2),
                         }
@@ -649,10 +662,21 @@ with aba_missao:
                 )
                 st.caption(
                     "Distância ortodrômica (círculo máximo) entre aeródromos. "
-                    "Tempo de decolagem a pouso; táxi informado à parte."
+                    "Tempo de decolagem a pouso; táxi informado à parte. "
+                    "BH x Confins usa tempo tabelado de 10 minutos, já faturado."
                 )
 
-# -------------------------- ABA 2: CONSULTA --------------------------------
+# --------------------------- ABA 2: COMAVE ---------------------------------
+with aba_comave_ui:
+    aba_comave.render(
+        AEROPORTOS_ORDENADOS,
+        CIDADES_EXTRAS,
+        formatador_localidade,
+        obter_dados_local,
+        obter_coordenada,
+    )
+
+# -------------------------- ABA 3: CONSULTA --------------------------------
 with aba_consulta:
     st.caption("Consulta dos aeródromos cadastrados. Áreas livres não entram nesta relação.")
 

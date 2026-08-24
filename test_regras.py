@@ -209,3 +209,28 @@ def test_formatar_brl():
     assert formatar_brl(1234.5) == "R$ 1.234,50"
     assert formatar_brl(0) == "R$ 0,00"
     assert formatar_brl(1000000) == "R$ 1.000.000,00"
+
+
+# --- Trecho de tempo fixo na DTA (BH x Confins) ----------------------------
+def test_bh_confins_tem_10_minutos_na_dta():
+    from regras import tempo_fixo_dta_minutos
+    assert tempo_fixo_dta_minutos("SBBH", "SBCF") == 10
+
+
+def test_bh_confins_dta_vale_nos_dois_sentidos():
+    from regras import tempo_fixo_dta_minutos
+    assert tempo_fixo_dta_minutos("SBCF", "SBBH") == 10
+
+
+def test_outros_pares_nao_tem_tempo_fixo_na_dta():
+    from regras import tempo_fixo_dta_minutos
+    assert tempo_fixo_dta_minutos("SBBH", "SBBR") is None
+    assert tempo_fixo_dta_minutos("SBCF", "SBUL") is None
+
+
+def test_tempo_fixo_dta_difere_do_comave():
+    """DTA usa 10 min no par BH x Confins; COMAVE usa 15. Não podem convergir."""
+    from regras import tempo_fixo_dta_minutos
+    from regras_comave import tempo_fixo_minutos
+    assert tempo_fixo_dta_minutos("SBBH", "SBCF") == 10
+    assert tempo_fixo_minutos("SBBH", "SBCF") == 15
