@@ -37,6 +37,7 @@ from regras import (
     velocidade_efetiva,
     verifica_restricao_pista,
 )
+from regras_solo import MSG_ACRESCIMO_SOLO, minutos_solo_perna
 
 try:
     from openpyxl import Workbook
@@ -240,7 +241,7 @@ def limpar_busca():
 
 
 # --- MOTOR DE CÁLCULO ------------------------------------------------------
-def calcular_missao(trechos):
+def calcular_missao(trechos, incluir_solo=False):
     linhas = []
     erros = []
     nomes_usados = []
@@ -294,12 +295,21 @@ def calcular_missao(trechos):
             tempo_decimal = dist_nm / vel_kt if vel_kt > 0 else 0.0
         custo_perna = tempo_decimal * dados_aero["valor_hora"]
 
+        # Acréscimo de solo opcional na DTA: entra APENAS no tempo exibido,
+        # nunca no custo. Trecho de tempo tabelado não recebe acréscimo.
+        minutos_solo = 0
+        if incluir_solo and minutos_fixos is None:
+            minutos_solo = minutos_solo_perna(
+                origem, destino, dados_aero.get("is_heli", False)
+            )
+        tempo_exibido = tempo_decimal + minutos_solo / 60
+
         if bloqueio_anac:
             tempo_txt = "NÃO OPERACIONAL (ANAC)"
             custo_txt = "NÃO OPERACIONAL (ANAC)"
             custo_perna = 0.0
         else:
-            tempo_txt = decimal_para_hhmmss(tempo_decimal)
+            tempo_txt = decimal_para_hhmmss(tempo_exibido)
             custo_txt = formatar_brl(custo_perna)
             custo_total += custo_perna
 
@@ -315,6 +325,8 @@ def calcular_missao(trechos):
                 "dist_nm": dist_nm,
                 "vel_kt": vel_kt,
                 "tempo_fixo": minutos_fixos is not None,
+                "minutos_solo": minutos_solo,
+                "tempo_voo_txt": decimal_para_hhmmss(tempo_decimal),
                 "tempo_txt": tempo_txt,
                 "custo_txt": custo_txt,
                 "custo_num": custo_perna,
@@ -341,6 +353,7 @@ def calcular_missao(trechos):
         # é divulgado. O cliente vê a tabela, identifica o problema e refaz o
         # planejamento antes de ter um número para levar adiante.
         "total_bloqueado": total_bloqueado,
+        "incluir_solo": incluir_solo,
         "gerado_em": datetime.now(),
     }
 
@@ -394,6 +407,14 @@ def montar_tabela_html(resultado):
             f"border: 1px solid #000000;'>{formatar_brl(resultado['custo_total'])}</td>"
         )
 
+    linha_nota = ""
+    if resultado.get("incluir_solo"):
+        linha_nota = (
+            "<tr style='background-color: #ffffff; color: #000000; font-size: 11px;'>"
+            f"<td colspan='10' style='padding: 6px; border: 1px solid #000000; "
+            f"text-align: left;'>{html.escape(MSG_ACRESCIMO_SOLO)}</td></tr>"
+        )
+
     cabecalhos = [
         "MUNICÍPIO - DECOLAGEM", "UF", "ICAO",
         "MUNICÍPIO - POUSO", "UF", "ICAO",
@@ -422,6 +443,7 @@ def montar_tabela_html(resultado):
         "<td colspan='8' style='padding: 10px; text-align: right; border: 1px solid #000000;'>TOTAL</td>"
         f"{celula_total}"
         "</tr>"
+        f"{linha_nota}"
         "</tbody></table></div>"
     )
 
@@ -474,6 +496,13 @@ def gerar_xlsx_missao(resultado):
     else:
         celula_total.value = resultado["custo_total"]
         celula_total.number_format = 'R$ #,##0.00'
+
+    if resultado.get("incluir_solo"):
+        linha_obs = linha_total + 1
+        ws.merge_cells(start_row=linha_obs, start_column=1, end_row=linha_obs, end_column=10)
+        celula_obs = ws.cell(row=linha_obs, column=1, value=MSG_ACRESCIMO_SOLO)
+        celula_obs.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+        celula_obs.font = Font(size=9, italic=True)
 
     # formatação geral
     for linha_cels in ws.iter_rows(min_row=1, max_row=linha_total, max_col=10):
@@ -544,6 +573,15 @@ with aba_missao:
 
     st.divider()
 
+    incluir_solo = st.checkbox(
+        "Incluir acréscimo de tempo de solo (15 min por aeroporto, 25 min se capital, "
+        "5 min por perna de helicóptero)",
+        key="dta_incluir_solo",
+        help="Afeta apenas o tempo exibido. O custo continua calculado pelo tempo de voo.",
+    )
+
+    st.divider()
+
     for i, trecho in enumerate(st.session_state.trechos):
         tid = trecho["id"]
         if i > 0:
@@ -611,7 +649,9 @@ with aba_missao:
     st.divider()
 
     if st.button("Calcular Missão Completa", type="primary", width="stretch"):
-        st.session_state.resultado = calcular_missao(st.session_state.trechos)
+        st.session_state.resultado = calcular_missao(
+            st.session_state.trechos, incluir_solo=incluir_solo
+        )
 
     # O resultado é renderizado FORA do if do botão. Clicar em "Baixar XLSX"
     # dispara um rerun do script; se a tabela dependesse do botão de cálculo,
@@ -652,7 +692,9 @@ with aba_missao:
                             "ANV": l["anv"],
                             "Distância (NM)": l["dist_nm"],
                             "Velocidade (KT)": "Tabelado" if l.get("tempo_fixo") else str(l["vel_kt"]),
-                            "Tempo": l["tempo_txt"],
+                            "Tempo de voo": l["tempo_voo_txt"],
+                            "Solo (min)": l["minutos_solo"],
+                            "Tempo exibido": l["tempo_txt"],
                             "Custo (R$)": round(l["custo_num"], 2),
                         }
                         for l in resultado["linhas"]
@@ -662,8 +704,9 @@ with aba_missao:
                 )
                 st.caption(
                     "Distância ortodrômica (círculo máximo) entre aeródromos. "
-                    "Tempo de decolagem a pouso; táxi informado à parte. "
-                    "BH x Confins usa tempo tabelado de 10 minutos, já faturado."
+                    "BH x Confins usa tempo tabelado de 10 minutos, já faturado. "
+                    "O acréscimo de solo, quando marcado, entra apenas no tempo "
+                    "exibido — o custo sai sempre do tempo de voo."
                 )
 
 # --------------------------- ABA 2: COMAVE ---------------------------------

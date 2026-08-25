@@ -9,45 +9,22 @@ Não altera nenhuma regra da DTA.
 from regras import velocidade_efetiva
 
 # --- Acréscimos de solo ----------------------------------------------------
-# Uma única soma por perna (táxi e providências pré-decolagem). Não se soma
-# origem com destino: a perna recebe 25 min se tocar capital em qualquer uma
-# das pontas, 15 min caso contrário, e 5 min quando for asa rotativa.
-MIN_SOLO_AVIAO = 15          # perna sem capital
-MIN_SOLO_AVIAO_CAPITAL = 25  # perna com capital na origem ou no destino
-MIN_SOLO_HELI = 5            # asa rotativa, tocando capital ou não
-
-# Aeroportos de capital nacional.
-# ATENÇÃO: SBBH (Pampulha) e SBCF (Confins) NÃO estão nesta lista — ver o
-# comentário em TEMPO_FIXO_COMAVE_MIN e a pendência registrada no README.
-CAPITAIS_ICAO = frozenset({
-    "SBAR", "SBBE", "SBBV", "SBBR", "SBCG", "SBCY", "SBCT", "SBFL", "SBFZ",
-    "SBGO", "SBGR", "SBJP", "SBMQ", "SBMO", "SBEG", "SBSG", "SBPJ", "SBPA",
-    "SBPV", "SBRF", "SBRB", "SBRJ", "SBGL", "SBSV", "SBSL", "SBSP", "SBTE",
-    "SBVT",
-})
+# A regra vive em regras_solo.py, compartilhada com a aba DTA. Aqui só se
+# define o que o COMAVE faz com ela: o tempo de solo É FATURADO.
+from regras_solo import (  # noqa: E402  (reexportado por conveniência)
+    CAPITAIS_ICAO,
+    MIN_SOLO_AVIAO,
+    MIN_SOLO_AVIAO_CAPITAL,
+    MIN_SOLO_HELI,
+    MSG_ACRESCIMO_SOLO,
+    minutos_solo_perna,
+    perna_toca_capital,
+)
 
 # --- Trechos de tempo fixo -------------------------------------------------
 # Pernas em que o tempo total é tabelado, substituindo o cálculo por distância.
 # Neste caso o tempo É faturado (decisão do cliente).
 TEMPO_FIXO_COMAVE_MIN = {frozenset({"SBBH", "SBCF"}): 15}
-
-
-def perna_toca_capital(origem, destino):
-    """True se a perna sai de ou chega a um aeroporto de capital nacional."""
-    return origem in CAPITAIS_ICAO or destino in CAPITAIS_ICAO
-
-
-def minutos_solo_perna(origem, destino, is_heli):
-    """
-    Acréscimo de solo da perna, em minutos. Uma única soma por perna:
-
-      helicóptero .......... 5 min, tocando capital ou não
-      avião com capital .... 25 min (capital na origem OU no destino)
-      demais aviões ........ 15 min
-    """
-    if is_heli:
-        return MIN_SOLO_HELI
-    return MIN_SOLO_AVIAO_CAPITAL if perna_toca_capital(origem, destino) else MIN_SOLO_AVIAO
 
 
 def tempo_fixo_minutos(origem, destino, tabela=None):
@@ -61,13 +38,14 @@ def calcular_tempos_comave(origem, destino, dados_aero, dist_nm):
     Devolve um dicionário com a decomposição do tempo da perna:
 
       tempo_voo_h      -> horas de voo puro (decolagem a pouso)
-      minutos_solo     -> acréscimo de solo exibido, não faturado
+      minutos_solo     -> acréscimo de solo da perna
       tempo_total_h    -> o que aparece na coluna TEMPO da tabela
       horas_faturadas  -> o que multiplica o valor da hora
       tempo_fixo       -> True se a perna usou tempo tabelado
 
-    Regra do faturamento: o tempo de solo entra no tempo exibido e NÃO entra
-    no custo. A exceção é a perna de tempo fixo, integralmente faturada.
+    Regra do faturamento no COMAVE: o tempo de solo É FATURADO — custo e
+    tempo exibido saem do mesmo número. Difere da aba DTA, onde o acréscimo
+    é opcional e nunca entra no custo.
     """
     minutos_fixos = tempo_fixo_minutos(origem, destino)
     if minutos_fixos is not None:
@@ -86,11 +64,12 @@ def calcular_tempos_comave(origem, destino, dados_aero, dist_nm):
 
     minutos_solo = minutos_solo_perna(origem, destino, dados_aero.get("is_heli", False))
 
+    tempo_total_h = tempo_voo_h + minutos_solo / 60
     return {
         "tempo_voo_h": tempo_voo_h,
         "minutos_solo": minutos_solo,
-        "tempo_total_h": tempo_voo_h + minutos_solo / 60,
-        "horas_faturadas": tempo_voo_h,
+        "tempo_total_h": tempo_total_h,
+        "horas_faturadas": tempo_total_h,
         "tempo_fixo": False,
         "vel_kt": vel_kt,
     }

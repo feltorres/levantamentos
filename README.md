@@ -10,7 +10,8 @@ Roteirizador point-to-point multipernas para estimativa de tempo e custo de miss
 | `dados.py` | Base estática **da DTA**: aeródromos, frota, coordenadas de emergência |
 | `regras.py` | Regras de negócio puras da DTA (distância, velocidade, restrições) |
 | `dados_comave.py` | Tabelas de custo **do COMAVE** por órgão/contrato (Nota Técnica nº 21) |
-| `regras_comave.py` | Regras de tempo de solo e trecho tabelado do COMAVE |
+| `regras_solo.py` | Regra do acréscimo de solo (15/25/5), compartilhada pelas duas abas |
+| `regras_comave.py` | Trecho tabelado e faturamento do COMAVE |
 | `aba_comave.py` | Interface da aba COMAVE |
 | `gerar_coordenadas.py` | Script auxiliar, rodado uma vez para gerar o JSON de coordenadas |
 | `tests/test_regras.py` | Suíte de regressão da DTA (pytest) |
@@ -57,6 +58,10 @@ coordenadas) e as validações de pista/ANAC, que são fatos operacionais.
   A regra é descontínua por definição da tabela do operador (200 NM custa menos que 199 NM).
 - BH x Confins (SBBH x SBCF): tempo tabelado de **10 minutos**, faturado por esse tempo.
   É a única exceção ao cálculo por distância na aba DTA.
+- **Acréscimo de solo: opcional**, via caixa de seleção acima do Trecho 1. Quando marcado,
+  soma 25 min à perna que toca capital, 15 min às demais e 5 min para helicóptero —
+  **apenas no tempo exibido**. O custo sai sempre do tempo de voo. Trecho tabelado
+  (BH x Confins) não recebe acréscimo.
 - Aeródromo com restrição da ANAC bloqueia o **custo total** da missão para aeronaves de asa
   fixa; a tabela é exibida para que o planejamento seja refeito. Helicópteros são isentos.
 
@@ -67,7 +72,8 @@ coordenadas) e as validações de pista/ANAC, que são fatos operacionais.
   não é oferecida naquele contrato (PBH só King Air, Uberlândia só Esquilo, CBM sem jato).
 - Acréscimo de solo, **uma única soma por perna**: **25 min** se a perna tocar capital
   (origem ou destino), **15 min** nas demais, **5 min** para helicóptero em qualquer caso.
-  Entra no tempo exibido e **não é faturado**.
+  **É faturado**: tempo exibido e tempo cobrado são o mesmo número. Sempre aplicado,
+  sem opção — difere da aba DTA justamente nisso.
 - BH x Confins: tempo tabelado de **15 minutos**, faturado integralmente.
 - O Citation VII (C650, PTMGS) foi vendido e não consta de nenhuma tabela.
 
@@ -75,9 +81,9 @@ coordenadas) e as validações de pista/ANAC, que são fatos operacionais.
 
 1. **SBBH e SBCF como capital?** Hoje não contam como capital: pernas que os tocam
    recebem 15 min, salvo o par BH x Confins, que é tabelado. Para mudar: incluir os dois
-   em `CAPITAIS_ICAO` (`regras_comave.py`). Há teste cobrindo a decisão atual.
+   em `CAPITAIS_ICAO` (`regras_solo.py`). Há teste cobrindo a decisão atual.
 2. **Helicóptero: 5 min por perna ou 5 min por ponta?** Implementado como 5 min por perna.
-   Para mudar: `MIN_SOLO_HELI` em `regras_comave.py`.
+   Para mudar: `MIN_SOLO_HELI` em `regras_solo.py`.
 3. **CBM/PMMG/IPSM:** a Nota Técnica cita apenas "King Air B300" a R$ 12.000. O B350
    (PR-XAA) foi mapeado no mesmo valor. Confirmar com o contrato.
 4. **Cessna 210 (PP-HAC):** consta de quatro tabelas do COMAVE, mas não foi incluído por

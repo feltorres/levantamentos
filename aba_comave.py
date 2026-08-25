@@ -26,13 +26,11 @@ from regras import (
     verifica_restricao_pista,
 )
 from regras_comave import (
-    MIN_SOLO_AVIAO,
-    MIN_SOLO_AVIAO_CAPITAL,
-    MIN_SOLO_HELI,
     aeronaves_do_contrato,
     calcular_tempos_comave,
     valor_hora,
 )
+from regras_solo import MSG_ACRESCIMO_SOLO
 
 try:
     from openpyxl import Workbook
@@ -44,12 +42,7 @@ except ImportError:  # pragma: no cover
     XLSX_DISPONIVEL = False
 
 MSG_TOTAL_BLOQUEADO = "TOTAL INDISPONÍVEL — HÁ TRECHO NÃO OPERACIONAL (ANAC)"
-NOTA_SOLO = (
-    f"Tempo exibido inclui acréscimo de solo por perna: {MIN_SOLO_AVIAO_CAPITAL} min "
-    f"quando a perna toca capital (origem ou destino), {MIN_SOLO_AVIAO} min nas demais "
-    f"e {MIN_SOLO_HELI} min para helicóptero. O acréscimo NÃO é faturado. Exceção: "
-    f"trechos de tempo tabelado, faturados integralmente."
-)
+NOTA_SOLO = MSG_ACRESCIMO_SOLO
 
 
 # --- ESTADO ----------------------------------------------------------------
