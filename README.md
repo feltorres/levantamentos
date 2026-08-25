@@ -65,16 +65,17 @@ coordenadas) e as validações de pista/ANAC, que são fatos operacionais.
 - Fonte: Nota Técnica nº 21/PMMG/COMAVE 4 - TDCO/CONV./2026 (SEI nº 144797834, 17/07/2026).
 - O valor da hora depende do **órgão/contrato selecionado**. Aeronave ausente de uma tabela
   não é oferecida naquele contrato (PBH só King Air, Uberlândia só Esquilo, CBM sem jato).
-- Acréscimo de solo: **15 min por aeroporto** (origem e destino), **25 min em capital**,
-  **5 min por perna** para helicóptero. Entra no tempo exibido e **não é faturado**.
+- Acréscimo de solo, **uma única soma por perna**: **25 min** se a perna tocar capital
+  (origem ou destino), **15 min** nas demais, **5 min** para helicóptero em qualquer caso.
+  Entra no tempo exibido e **não é faturado**.
 - BH x Confins: tempo tabelado de **15 minutos**, faturado integralmente.
 - O Citation VII (C650, PTMGS) foi vendido e não consta de nenhuma tabela.
 
 ## Pendências de confirmação (COMAVE)
 
-1. **SBBH e SBCF como capital?** Hoje recebem 15 min de solo, não 25, em pernas que não
-   sejam o par BH x Confins. Para mudar: incluir os dois em `CAPITAIS_ICAO`
-   (`regras_comave.py`). Há teste cobrindo a decisão atual.
+1. **SBBH e SBCF como capital?** Hoje não contam como capital: pernas que os tocam
+   recebem 15 min, salvo o par BH x Confins, que é tabelado. Para mudar: incluir os dois
+   em `CAPITAIS_ICAO` (`regras_comave.py`). Há teste cobrindo a decisão atual.
 2. **Helicóptero: 5 min por perna ou 5 min por ponta?** Implementado como 5 min por perna.
    Para mudar: `MIN_SOLO_HELI` em `regras_comave.py`.
 3. **CBM/PMMG/IPSM:** a Nota Técnica cita apenas "King Air B300" a R$ 12.000. O B350

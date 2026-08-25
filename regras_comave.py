@@ -9,9 +9,12 @@ Não altera nenhuma regra da DTA.
 from regras import velocidade_efetiva
 
 # --- Acréscimos de solo ----------------------------------------------------
-MIN_SOLO_AVIAO = 15          # táxi e providências pré-decolagem
-MIN_SOLO_AVIAO_CAPITAL = 25  # aeroporto de capital nacional
-MIN_SOLO_HELI = 5            # acréscimo único por perna, asa rotativa
+# Uma única soma por perna (táxi e providências pré-decolagem). Não se soma
+# origem com destino: a perna recebe 25 min se tocar capital em qualquer uma
+# das pontas, 15 min caso contrário, e 5 min quando for asa rotativa.
+MIN_SOLO_AVIAO = 15          # perna sem capital
+MIN_SOLO_AVIAO_CAPITAL = 25  # perna com capital na origem ou no destino
+MIN_SOLO_HELI = 5            # asa rotativa, tocando capital ou não
 
 # Aeroportos de capital nacional.
 # ATENÇÃO: SBBH (Pampulha) e SBCF (Confins) NÃO estão nesta lista — ver o
@@ -29,9 +32,22 @@ CAPITAIS_ICAO = frozenset({
 TEMPO_FIXO_COMAVE_MIN = {frozenset({"SBBH", "SBCF"}): 15}
 
 
-def minutos_solo_local(icao):
-    """Acréscimo de solo, em minutos, para um aeroporto (asa fixa)."""
-    return MIN_SOLO_AVIAO_CAPITAL if icao in CAPITAIS_ICAO else MIN_SOLO_AVIAO
+def perna_toca_capital(origem, destino):
+    """True se a perna sai de ou chega a um aeroporto de capital nacional."""
+    return origem in CAPITAIS_ICAO or destino in CAPITAIS_ICAO
+
+
+def minutos_solo_perna(origem, destino, is_heli):
+    """
+    Acréscimo de solo da perna, em minutos. Uma única soma por perna:
+
+      helicóptero .......... 5 min, tocando capital ou não
+      avião com capital .... 25 min (capital na origem OU no destino)
+      demais aviões ........ 15 min
+    """
+    if is_heli:
+        return MIN_SOLO_HELI
+    return MIN_SOLO_AVIAO_CAPITAL if perna_toca_capital(origem, destino) else MIN_SOLO_AVIAO
 
 
 def tempo_fixo_minutos(origem, destino, tabela=None):
@@ -68,10 +84,7 @@ def calcular_tempos_comave(origem, destino, dados_aero, dist_nm):
     vel_kt = velocidade_efetiva(dados_aero, dist_nm)
     tempo_voo_h = dist_nm / vel_kt if vel_kt > 0 else 0.0
 
-    if dados_aero.get("is_heli"):
-        minutos_solo = MIN_SOLO_HELI
-    else:
-        minutos_solo = minutos_solo_local(origem) + minutos_solo_local(destino)
+    minutos_solo = minutos_solo_perna(origem, destino, dados_aero.get("is_heli", False))
 
     return {
         "tempo_voo_h": tempo_voo_h,

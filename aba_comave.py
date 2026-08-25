@@ -45,10 +45,10 @@ except ImportError:  # pragma: no cover
 
 MSG_TOTAL_BLOQUEADO = "TOTAL INDISPONÍVEL — HÁ TRECHO NÃO OPERACIONAL (ANAC)"
 NOTA_SOLO = (
-    f"Tempo exibido inclui o acréscimo de solo ({MIN_SOLO_AVIAO} min por aeroporto, "
-    f"{MIN_SOLO_AVIAO_CAPITAL} min em capital, {MIN_SOLO_HELI} min por perna de "
-    f"helicóptero), que NÃO é faturado. Exceção: trechos de tempo tabelado, "
-    f"faturados integralmente."
+    f"Tempo exibido inclui acréscimo de solo por perna: {MIN_SOLO_AVIAO_CAPITAL} min "
+    f"quando a perna toca capital (origem ou destino), {MIN_SOLO_AVIAO} min nas demais "
+    f"e {MIN_SOLO_HELI} min para helicóptero. O acréscimo NÃO é faturado. Exceção: "
+    f"trechos de tempo tabelado, faturados integralmente."
 )
 
 
