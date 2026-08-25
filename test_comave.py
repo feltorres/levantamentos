@@ -21,7 +21,8 @@ from regras_comave import (  # noqa: E402
     MIN_SOLO_HELI,
     aeronaves_do_contrato,
     calcular_tempos_comave,
-    minutos_solo_local,
+    minutos_solo_perna,
+    perna_toca_capital,
     tempo_fixo_minutos,
     valor_hora,
 )
@@ -32,50 +33,63 @@ B200 = FROTA_COMAVE["King Air B200 (PTWGS)"]
 
 
 # --- Tempo de solo ---------------------------------------------------------
-def test_aeroporto_comum_recebe_15_minutos():
-    assert minutos_solo_local("SNDV") == MIN_SOLO_AVIAO == 15
+def test_perna_sem_capital_recebe_15_minutos():
+    t = calcular_tempos_comave("SNDV", "SNPD", C90, 200)
+    assert t["minutos_solo"] == MIN_SOLO_AVIAO == 15
 
 
-def test_capital_recebe_25_minutos():
-    assert minutos_solo_local("SBBR") == MIN_SOLO_AVIAO_CAPITAL == 25
+def test_capital_na_origem_gera_25_minutos():
+    t = calcular_tempos_comave("SBBR", "SNPD", C90, 200)
+    assert t["minutos_solo"] == MIN_SOLO_AVIAO_CAPITAL == 25
+
+
+def test_capital_no_destino_tambem_gera_25_minutos():
+    t = calcular_tempos_comave("SNDV", "SBBR", C90, 200)
+    assert t["minutos_solo"] == 25
+
+
+def test_perna_entre_capitais_nao_soma_duas_vezes():
+    """25 min é o teto da perna: origem e destino não se acumulam."""
+    t = calcular_tempos_comave("SBBR", "SBSP", C90, 400)
+    assert t["minutos_solo"] == 25
 
 
 def test_pampulha_e_confins_nao_contam_como_capital():
     # PENDENTE DE CONFIRMAÇÃO: ver o README. Se a decisão mudar, basta
     # incluir SBBH e SBCF em CAPITAIS_ICAO — este teste denuncia a mudança.
-    assert minutos_solo_local("SBBH") == 15
-    assert minutos_solo_local("SBCF") == 15
+    assert perna_toca_capital("SBBH", "SNPD") is False
+    assert perna_toca_capital("SBCF", "SNPD") is False
+    assert calcular_tempos_comave("SBBH", "SNPD", C90, 200)["minutos_solo"] == 15
 
 
-def test_aviao_soma_solo_da_origem_e_do_destino():
-    t = calcular_tempos_comave("SNDV", "SNPD", C90, 200)
-    assert t["minutos_solo"] == 30  # 15 + 15
+def test_helicoptero_recebe_5_minutos_em_qualquer_perna():
+    sem_capital = calcular_tempos_comave("SNDV", "SNPD", ESQUILO, 200)
+    com_capital = calcular_tempos_comave("SBBR", "SBSP", ESQUILO, 400)
+    assert sem_capital["minutos_solo"] == com_capital["minutos_solo"] == MIN_SOLO_HELI == 5
 
 
-def test_aviao_de_capital_para_interior():
-    t = calcular_tempos_comave("SBBR", "SNPD", C90, 200)
-    assert t["minutos_solo"] == 40  # 25 + 15
-
-
-def test_aviao_entre_capitais():
-    t = calcular_tempos_comave("SBBR", "SBSP", C90, 400)
-    assert t["minutos_solo"] == 50  # 25 + 25
-
-
-def test_helicoptero_recebe_5_minutos_por_perna():
-    t = calcular_tempos_comave("SBBR", "SBSP", ESQUILO, 400)
-    assert t["minutos_solo"] == MIN_SOLO_HELI == 5
+def test_minutos_solo_perna_direto():
+    assert minutos_solo_perna("SNDV", "SNPD", False) == 15
+    assert minutos_solo_perna("SNDV", "SBGL", False) == 25
+    assert minutos_solo_perna("SBGL", "SBSP", True) == 5
 
 
 def test_tempo_de_solo_entra_no_total_exibido():
     t = calcular_tempos_comave("SNDV", "SNPD", C90, 200)
-    assert t["tempo_total_h"] == pytest.approx(t["tempo_voo_h"] + 30 / 60)
+    assert t["tempo_total_h"] == pytest.approx(t["tempo_voo_h"] + 15 / 60)
 
 
-def test_tempo_de_solo_nao_entra_no_faturamento():
+def test_tempo_de_solo_e_faturado_no_comave():
+    """No COMAVE o solo entra no custo: tempo exibido e faturado são o mesmo."""
     t = calcular_tempos_comave("SNDV", "SNPD", C90, 200)
-    assert t["horas_faturadas"] == pytest.approx(t["tempo_voo_h"])
-    assert t["horas_faturadas"] < t["tempo_total_h"]
+    assert t["horas_faturadas"] == pytest.approx(t["tempo_total_h"])
+    assert t["horas_faturadas"] > t["tempo_voo_h"]
+
+
+def test_custo_comave_reflete_o_tempo_exibido():
+    preco = 12000.0
+    t = calcular_tempos_comave("SNDV", "SBBR", C90, 200)  # 25 min de solo
+    assert t["horas_faturadas"] * preco == pytest.approx((t["tempo_voo_h"] + 25 / 60) * preco)
 
 
 # --- Trecho de tempo fixo --------------------------------------------------
@@ -114,7 +128,7 @@ def test_b200_mantem_a_tabela_dupla_no_comave():
 
 
 def test_gatilho_do_b200_usa_tempo_de_voo_e_nao_o_solo():
-    # 190 NM a 200 KT = 0,95 h de voo; com 30 min de solo passaria de 1 h,
+    # 190 NM a 200 KT = 0,95 h de voo; com 15 min de solo passaria de 1 h,
     # mas o gatilho olha só o voo, então continua na primeira tabela.
     t = calcular_tempos_comave("SNDV", "SNPD", B200, 190)
     assert t["vel_kt"] == 200

@@ -234,3 +234,37 @@ def test_tempo_fixo_dta_difere_do_comave():
     from regras_comave import tempo_fixo_minutos
     assert tempo_fixo_dta_minutos("SBBH", "SBCF") == 10
     assert tempo_fixo_minutos("SBBH", "SBCF") == 15
+
+
+# --- Regra de solo compartilhada -------------------------------------------
+def test_regra_de_solo_e_a_mesma_nos_dois_clientes():
+    """
+    A regra de QUANTO somar é única (regras_solo). O que cada aba FAZ com o
+    tempo é que difere: o COMAVE fatura, a DTA só exibe e ainda por opção.
+    """
+    from regras_solo import minutos_solo_perna
+    assert minutos_solo_perna("SNDV", "SNPD", False) == 15
+    assert minutos_solo_perna("SNDV", "SBBR", False) == 25
+    assert minutos_solo_perna("SBBR", "SBSP", False) == 25
+    assert minutos_solo_perna("SBBR", "SBSP", True) == 5
+
+
+def test_comave_reexporta_a_mesma_regra_de_solo():
+    import regras_comave
+    import regras_solo
+    assert regras_comave.minutos_solo_perna is regras_solo.minutos_solo_perna
+    assert regras_comave.MSG_ACRESCIMO_SOLO is regras_solo.MSG_ACRESCIMO_SOLO
+
+
+def test_mensagem_de_rodape_e_exatamente_a_pedida():
+    from regras_solo import MSG_ACRESCIMO_SOLO
+    assert MSG_ACRESCIMO_SOLO == (
+        "Tempo exibido inclui o acréscimo de solo (15 min por aeroporto, "
+        "25 min se capital, 5 min por perna de helicóptero)."
+    )
+
+
+def test_trecho_tabelado_da_dta_nao_recebe_acrescimo():
+    """BH x Confins é tempo fechado: 10 min continuam 10 min, com ou sem opção."""
+    from regras import tempo_fixo_dta_minutos
+    assert tempo_fixo_dta_minutos("SBBH", "SBCF") == 10
