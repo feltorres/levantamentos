@@ -79,10 +79,17 @@ def test_tempo_de_solo_entra_no_total_exibido():
     assert t["tempo_total_h"] == pytest.approx(t["tempo_voo_h"] + 15 / 60)
 
 
-def test_tempo_de_solo_nao_entra_no_faturamento():
+def test_tempo_de_solo_e_faturado_no_comave():
+    """No COMAVE o solo entra no custo: tempo exibido e faturado são o mesmo."""
     t = calcular_tempos_comave("SNDV", "SNPD", C90, 200)
-    assert t["horas_faturadas"] == pytest.approx(t["tempo_voo_h"])
-    assert t["horas_faturadas"] < t["tempo_total_h"]
+    assert t["horas_faturadas"] == pytest.approx(t["tempo_total_h"])
+    assert t["horas_faturadas"] > t["tempo_voo_h"]
+
+
+def test_custo_comave_reflete_o_tempo_exibido():
+    preco = 12000.0
+    t = calcular_tempos_comave("SNDV", "SBBR", C90, 200)  # 25 min de solo
+    assert t["horas_faturadas"] * preco == pytest.approx((t["tempo_voo_h"] + 25 / 60) * preco)
 
 
 # --- Trecho de tempo fixo --------------------------------------------------
