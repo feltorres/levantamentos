@@ -13,6 +13,10 @@ alterar a aba DTA, e vice-versa.
 
 O Citation VII (C650, PTMGS) foi vendido e por isso não consta de nenhuma
 tabela, ainda que a Nota Técnica o mencione.
+
+A tabela da FHEMIG (item "b" da Nota Técnica) foi removida a pedido do cliente
+por não ser mais necessária. O contrato segue existindo no documento de origem;
+se voltar a ser preciso, recuperar do histórico do Git.
 """
 
 # ---------------------------------------------------------------------------
@@ -69,18 +73,6 @@ _PADRAO = {
     "King Air B300 (PP-EJO)": 13750.00,
     "King Air B350 (PR-XAA)": 13750.00,
     "Citation Bravo": 31900.00,
-}
-
-# Item (b) — FHEMIG / MG Transplantes
-_FHEMIG = {
-    "Esquilo AS350": 8750.00,
-    "Dauphin N2 (PP-EPO)": 10000.00,
-    "Dauphin N3 (PR-DTG)": 10000.00,
-    "King Air C90 (PR/PT-OSO)": 8750.00,
-    "King Air B200 (PTWGS)": 9000.00,
-    "King Air B300 (PP-EJO)": 12000.00,
-    "King Air B350 (PR-XAA)": 12000.00,
-    "Citation Bravo": 12000.00,
 }
 
 # Item (c) — SEAPA (nomenclatura por designação: BE9L, BE20, BE30, C550)
@@ -185,14 +177,6 @@ CONTRATOS = {
         "precos": _UBERLANDIA,
         "observacao": "Convênio cobre exclusivamente o Esquilo AS350.",
     },
-    "FHEMIG — MG Transplantes (TDCO)": {
-        "sei": "1320.01.0019894/2023-40",
-        "vigencia": "15/06/2027",
-        "item_nt": "b",
-        "precos": _FHEMIG,
-        "observacao": "Não confundir com o SES 2 (MGTx): o Dauphin custa aqui "
-                      "cerca de um terço do valor praticado naquele contrato.",
-    },
     "SEAPA — Secretaria de Agricultura": {
         "sei": "1250.01.0004203/2020-56",
         "vigencia": "19/10/2026",
@@ -204,8 +188,6 @@ CONTRATOS = {
         "vigencia": "23/05/2031",
         "item_nt": "e",
         "precos": _SES2,
-        "observacao": "Não confundir com a FHEMIG, que também atende MGTx com "
-                      "tabela própria e bem mais barata.",
     },
     "GMG/PMMG — Gestão da frota (Tabela 13A)": {
         "sei": "1070.01.0003858/2025-93",

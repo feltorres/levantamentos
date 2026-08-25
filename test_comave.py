@@ -171,18 +171,6 @@ def test_seis_orgaos_compartilham_a_tabela_padrao():
 
 
 @pytest.mark.parametrize("aeronave,esperado", [
-    ("Esquilo AS350", 8750.00),
-    ("Dauphin N2 (PP-EPO)", 10000.00),
-    ("King Air C90 (PR/PT-OSO)", 8750.00),
-    ("King Air B200 (PTWGS)", 9000.00),
-    ("King Air B300 (PP-EJO)", 12000.00),
-    ("Citation Bravo", 12000.00),
-])
-def test_tabela_fhemig(aeronave, esperado):
-    assert valor_hora(CONTRATOS["FHEMIG — MG Transplantes (TDCO)"], aeronave) == esperado
-
-
-@pytest.mark.parametrize("aeronave,esperado", [
     ("Esquilo AS350", 11307.82),
     ("Dauphin N3 (PR-DTG)", 29440.91),
     ("King Air C90 (PR/PT-OSO)", 9055.37),
@@ -267,14 +255,10 @@ def test_citation_vii_nao_existe_em_lugar_nenhum():
             assert "VII" not in aeronave and "C650" not in aeronave
 
 
-def test_dauphin_fhemig_e_muito_mais_barato_que_ses2():
-    """
-    Armadilha real: FHEMIG e SES 2 atendem o MG Transplantes com tabelas
-    diferentes. Clicar no contrato errado quase triplica o valor do Dauphin.
-    """
-    fhemig = valor_hora(CONTRATOS["FHEMIG — MG Transplantes (TDCO)"], "Dauphin N3 (PR-DTG)")
-    ses2 = valor_hora(CONTRATOS["SES 2 — MG Transplantes (TDCO)"], "Dauphin N3 (PR-DTG)")
-    assert ses2 > fhemig * 2.5
+def test_fhemig_foi_removida():
+    """Removida a pedido do cliente. Nenhum vestígio pode restar no seletor."""
+    assert not any("FHEMIG" in nome.upper() for nome in CONTRATOS)
+    assert len(CONTRATOS) == 11
 
 
 # --- Integridade -----------------------------------------------------------
