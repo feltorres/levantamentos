@@ -58,7 +58,7 @@ BBOX_BRASIL = {"lat_min": -35.0, "lat_max": 6.0, "lon_min": -75.0, "lon_max": -3
 
 MSG_TOTAL_BLOQUEADO = "TOTAL INDISPONÍVEL — HÁ TRECHO NÃO OPERACIONAL (ANAC)"
 
-st.set_page_config(page_title="Planejador de Missões - DTA", page_icon="🚁", layout="wide")
+st.set_page_config(page_title="Planejador de Missões - DTA", page_icon="✈️", layout="wide")
 
 AEROPORTOS_ORDENADOS = dict(sorted(AEROPORTOS.items(), key=lambda item: item[1]["cidade"]))
 
