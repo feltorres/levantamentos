@@ -551,7 +551,7 @@ def gerar_xlsx_aerodromos(df):
 # ===========================================================================
 # INTERFACE
 # ===========================================================================
-st.title("🚁 Planejador de Missões Aéreas - DTA")
+st.title("✈️ Planejador de Missões Aéreas - DTA")
 
 aba_missao, aba_comave_ui, aba_consulta = st.tabs(
     ["✈️ Cálculo de Missão (DTA)", "🛡️ Cálculo COMAVE", "🛬 Consulta de Aeródromos"]
